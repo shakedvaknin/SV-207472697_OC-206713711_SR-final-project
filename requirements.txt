@@ -6,3 +6,5 @@ tqdm
 patchify
 Pillow
 tensorboard
+scikit-image
+clean-fid
