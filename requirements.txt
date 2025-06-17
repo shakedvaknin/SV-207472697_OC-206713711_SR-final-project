@@ -1,0 +1,8 @@
+torch==2.2.2+cu121
+torchvision==0.17.2+cu121
+numpy
+h5py
+tqdm
+patchify
+Pillow
+tensorboard

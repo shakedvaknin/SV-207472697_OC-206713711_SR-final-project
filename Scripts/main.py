@@ -73,15 +73,6 @@ def main():
         results = json.load(f)
 
     visualize_results_from_json(results)
-    # visualize_results(
-    #     models=[srcnn_model, svoc_model],
-    #     #models=[svoc_model],
-    #     model_names=["SRCNN", "SvOcSRCNN"],
-    #     #model_names=["SvOcSRCNN"],
-    #     dataset=full_dataset,
-    #     device=device,
-    #     num_images=5
-    # )
 
 
 if __name__ == "__main__":
