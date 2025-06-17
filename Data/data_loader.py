@@ -1,7 +1,7 @@
 from imports import *
 
 class DIV2KDataset(Dataset):
-    def __init__(self, hr_folder, scale=2, max_images=None):
+    def __init__(self, hr_folder, scale=2):
         self.hr_folder = hr_folder
         self.hr_files = sorted([f for f in os.listdir(hr_folder) if f.endswith('.png')])
         self.scale = scale

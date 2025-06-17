@@ -1,16 +1,17 @@
 from imports import *
+from Models.SRCNN_model import SRCNN
+from Models.SvOcSRCNN_model import SvOcSRCNN
+def train_srcnn(model, dataloader, num_epochs=5, device=None):
 
-def train_srcnn(SRCNN, DIV2KDataset, download_div2k, scale=2, max_images=30, batch_size=4, num_epochs=5, device=None):
     if device is None:
         device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-    # Load dataset
-    download_div2k("data")
-    dataset = DIV2KDataset("data/DIV2K_train_HR", scale=scale, max_images=max_images)
-    dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
-
     # Initialize model, loss, optimizer
-    model = SRCNN().to(device)
+    if model == "srcnn":
+        model = SRCNN().to(device)
+    if model == "svocsrcnn":
+        model = SvOcSRCNN().to(device)
+
     optimizer = optim.Adam(model.parameters(), lr=1e-4)
     criterion = nn.MSELoss()
 

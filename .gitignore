@@ -40,3 +40,5 @@ build/
 dist/
 *.egg-info/
 
+# Data directories
+/Data/DIV2K
