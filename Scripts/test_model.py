@@ -1,8 +1,12 @@
 from imports import *
+from torchmetrics.image.fid import FrechetInceptionDistance
 
 def evaluate_and_collect(model, name, device, test_loader):
     psnr_list = []
     ssim_list = []
+
+    # FID metric instance
+    fid_metric = FrechetInceptionDistance(feature=2048, normalize=True).to(device)
 
     with tempfile.TemporaryDirectory() as tmpdir:
         gen_dir = os.path.join(tmpdir, "gen")
@@ -27,10 +31,16 @@ def evaluate_and_collect(model, name, device, test_loader):
             sr_img = (sr_np * 255).clip(0, 255).astype(np.uint8)
             hr_img = (hr_np * 255).clip(0, 255).astype(np.uint8)
 
+            sr_tensor = F.interpolate(sr, size=(299, 299), mode='bilinear', align_corners=False)
+            hr_tensor = F.interpolate(hr, size=(299, 299), mode='bilinear', align_corners=False)
+
+            fid_metric.update(sr_tensor.to(device), real=False)
+            fid_metric.update(hr_tensor.to(device), real=True)
+
             Image.fromarray(sr_img).save(os.path.join(gen_dir, f"{i:04d}.png"))
             Image.fromarray(hr_img).save(os.path.join(real_dir, f"{i:04d}.png"))
 
-        fid_score = fid.compute_fid(gen_dir, real_dir)
+        fid_score = fid_metric.compute().item()
 
     return {
         "PSNR": round(np.mean(psnr_list), 4),

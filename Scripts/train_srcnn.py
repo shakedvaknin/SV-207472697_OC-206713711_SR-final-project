@@ -1,16 +1,11 @@
 from imports import *
 from Models.SRCNN_model import SRCNN
 from Models.SvOcSRCNN_model import SvOcSRCNN
-def train_srcnn(model, dataloader, num_epochs=5, device=None):
+def train_srcnn(model, train_loader, val_loader, num_epochs=5, device=None):
 
     if device is None:
         device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-    # Initialize model, loss, optimizer
-    if model == "srcnn":
-        model = SRCNN().to(device)
-    if model == "svocsrcnn":
-        model = SvOcSRCNN().to(device)
 
     optimizer = optim.Adam(model.parameters(), lr=1e-4)
     criterion = nn.MSELoss()
@@ -25,7 +20,7 @@ def train_srcnn(model, dataloader, num_epochs=5, device=None):
         model.train()
         epoch_loss = 0.0
 
-        loop = tqdm(dataloader, desc=f"Epoch [{epoch+1}/{num_epochs}]", leave=False)
+        loop = tqdm(train_loader, desc=f"Epoch [{epoch+1}/{num_epochs}]", leave=False)
         for lr_imgs, hr_imgs in loop:
             lr_imgs, hr_imgs = lr_imgs.to(device), hr_imgs.to(device)
 
@@ -39,13 +34,13 @@ def train_srcnn(model, dataloader, num_epochs=5, device=None):
             epoch_loss += loss.item()
             loop.set_postfix(loss=loss.item())
 
-        avg_loss = epoch_loss / len(dataloader)
+        avg_loss = epoch_loss / len(train_loader)
         history['train_loss'].append(avg_loss)
 
         # Evaluate using first image in batch for PSNR/SSIM (quick sanity check)
         model.eval()
         with torch.no_grad():
-            val_lr, val_hr = next(iter(dataloader))
+            val_lr, val_hr = next(iter(val_loader))
             val_lr, val_hr = val_lr.to(device), val_hr.to(device)
             pred_hr = model(val_lr)
 

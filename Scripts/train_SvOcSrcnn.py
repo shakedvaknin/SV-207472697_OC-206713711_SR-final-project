@@ -1,5 +1,7 @@
 from imports import *
 from helpers import save_batch_as_images
+from torchmetrics.image.fid import FrechetInceptionDistance
+from torchvision.transforms import Resize
 
 def train_SvOcSRCNN(
     model,
@@ -25,6 +27,9 @@ def train_SvOcSRCNN(
     }
 
     best_fid = float("inf")
+
+    fid_metric = FrechetInceptionDistance(feature=2048, normalize=True).to(device)
+    resizer = Resize((299, 299))
 
     for epoch in range(num_epochs):
         model.train()
@@ -56,10 +61,6 @@ def train_SvOcSRCNN(
         psnr_total = 0.0
         ssim_total = 0.0
 
-        # Temporary dirs for FID
-        tmp_sr_dir = tempfile.mkdtemp()
-        tmp_hr_dir = tempfile.mkdtemp()
-
         with torch.no_grad():
             for lr_imgs, hr_imgs in val_loader:
                 lr_imgs = lr_imgs.to(device)
@@ -71,9 +72,9 @@ def train_SvOcSRCNN(
                 loss = alpha * loss_l1 + (1 - alpha) * loss_perc
                 val_loss += loss.item()
 
-                # Save to FID folders
-                save_batch_as_images(sr_imgs, tmp_sr_dir)
-                save_batch_as_images(hr_imgs, tmp_hr_dir)
+                # FID update
+                fid_metric.update(resizer(sr_imgs), real=False)
+                fid_metric.update(resizer(hr_imgs), real=True)
 
                 # Metrics for first image
                 sr_np = sr_imgs[0].clamp(0, 1).cpu().permute(1, 2, 0).numpy()
@@ -89,10 +90,8 @@ def train_SvOcSRCNN(
         avg_psnr = psnr_total / len(val_loader)
         avg_ssim = ssim_total / len(val_loader)
 
-        fid_score = fid.compute_fid(tmp_sr_dir, tmp_hr_dir, mode="clean", dataset_name=None)
-
-        shutil.rmtree(tmp_sr_dir)
-        shutil.rmtree(tmp_hr_dir)
+        fid_score = fid_metric.compute().item()
+        fid_metric.reset()
 
         history['val_loss'].append(avg_val_loss)
         history['psnr'].append(avg_psnr)
