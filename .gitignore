@@ -42,3 +42,5 @@ dist/
 
 # Data directories
 /Data/DIV2K
+*.json
+checkpoints/

@@ -1,4 +1,5 @@
-from imports import *
+import torch.nn as nn
+import torch.nn.functional as F
 
 class SRCNN(nn.Module):
     """ Vanilla model of SRCNN with 3 conv layers. """
