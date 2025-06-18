@@ -30,7 +30,6 @@ def convert_to_builtin(obj):
     else:
         return obj
 
-
 def train_val_test(model: nn.Module,
         train_loader,
         val_loader,
@@ -120,12 +119,8 @@ def train_val_test(model: nn.Module,
     example_indices = random.sample(range(len(test_loader.dataset)), N) if len(test_loader.dataset) >= N else list(range(len(test_loader.dataset)))
     saved_idx = 0
 
-    if save_dir:
-        test_image_dir = Path(save_dir) / "test_examples"
-        (test_image_dir / "output").mkdir(parents=True, exist_ok=True)
-        (test_image_dir / "gt").mkdir(parents=True, exist_ok=True)
-        (test_image_dir / "lr").mkdir(parents=True, exist_ok=True)
-        (test_image_dir / "collages").mkdir(parents=True, exist_ok=True)
+    collage_dir = Path(save_dir) / "collages"
+    collage_dir.mkdir(parents=True, exist_ok=True)
 
     temp_out = Path(tempfile.mkdtemp()) / "output"
     temp_gt = Path(tempfile.mkdtemp()) / "gt"
@@ -144,20 +139,14 @@ def train_val_test(model: nn.Module,
             save_image(output.clamp(0, 1), temp_out / f"{idx:05d}.png")
             save_image(hr_img.clamp(0, 1), temp_gt / f"{idx:05d}.png")
 
-            if save_dir and idx in example_indices:
+            if idx in example_indices:
                 caption = f"PSNR: {psnr:.2f}, SSIM: {ssim:.4f}"
                 lr_annot = annotate_image(lr_img, caption)
                 sr_annot = annotate_image(output, caption)
                 hr_annot = annotate_image(hr_img, caption)
 
-                base_name = f"{saved_idx:05d}_PSNR{psnr:.2f}_SSIM{ssim:.4f}.png"
-                save_image(lr_annot.clamp(0, 1), test_image_dir / "lr" / base_name)
-                save_image(sr_annot.clamp(0, 1), test_image_dir / "output" / base_name)
-                save_image(hr_annot.clamp(0, 1), test_image_dir / "gt" / base_name)
-
-                # Create and save collage
                 collage = [TF.to_pil_image(t.squeeze(0).cpu()) for t in [lr_annot, sr_annot, hr_annot]]
-                collage_path = test_image_dir / "collages" / base_name
+                collage_path = collage_dir / f"{saved_idx:05d}_PSNR{psnr:.2f}_SSIM{ssim:.4f}.png"
                 create_collage(collage, collage_path)
 
                 saved_idx += 1
