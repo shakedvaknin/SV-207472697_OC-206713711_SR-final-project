@@ -1,6 +1,4 @@
 # SRCNN-final-project
-final project of Deep Learning course for image proccessing
-
-this code has written by ofek cohen and shaked vaknin.
-before running this code, ensure all packages are installed.
-requirment file will be added later.
+Final project of Deep Learning course for image proccessing.
+This code compare SRCNN vanilla model to 2 modelsthat we created on our own based on SRCNN and VDSR models.
+This notebook has written by Ofek cohen and Shaked vaknin.
