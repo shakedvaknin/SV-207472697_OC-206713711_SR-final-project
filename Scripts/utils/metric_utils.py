@@ -10,6 +10,8 @@ def compute_psnr(sr: torch.Tensor, hr: torch.Tensor, data_range=1.0) -> float:
     Returns:
         PSNR value averaged over the batch
     """
+    sr = sr.clamp(0, 1) # Ensure values are in [0, 1] range
+    hr = hr.clamp(0, 1) # Ensure values are in [0, 1] range
     sr_np = sr.detach().cpu().numpy()
     hr_np = hr.detach().cpu().numpy()
     psnr = 0.0
@@ -28,6 +30,8 @@ def compute_ssim_batch(sr: torch.Tensor, hr: torch.Tensor, data_range=1.0) -> fl
     Returns:
         Average SSIM value over batch
     """
+    sr = sr.clamp(0, 1) # Ensure values are in [0, 1] range
+    hr = hr.clamp(0, 1) # Ensure values are in [0, 1] range
     sr_np = sr.detach().cpu().numpy()
     hr_np = hr.detach().cpu().numpy()
     ssim = 0.0

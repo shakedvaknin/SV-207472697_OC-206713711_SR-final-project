@@ -2,6 +2,7 @@ from torchvision.models import vgg19, VGG19_Weights
 import torch.nn.functional as F
 import torchvision.transforms as transforms
 import torch.nn as nn
+import torch
 
 class PerceptualLoss(nn.Module):
     def __init__(self, resize=True, device='cpu'):
@@ -38,3 +39,10 @@ class CombinedLoss(nn.Module):
         perceptual = self.perceptual(sr, hr)
         return self.alpha * l1 + (1 - self.alpha) * perceptual
 
+class CharbonnierLoss(torch.nn.Module):
+    def __init__(self, eps=1e-3):
+        super(CharbonnierLoss, self).__init__()
+        self.eps = eps
+
+    def forward(self, pred, target):
+        return torch.mean(torch.sqrt((pred - target) ** 2 + self.eps ** 2))
