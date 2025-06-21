@@ -15,11 +15,14 @@ from Models.SvOcSRCNN_model import SvOcSRCNN
 from Models.VDSR_Attention import VDSR_SA
 from Models.VDSR import VDSR
 from Models.RCAN import RCAN
+from Models.FusionNet import FusionNet
 
+from Scripts.train_fusion import train_fusion_net
 from Scripts.train_val_test import train_val_test
 from Scripts.losses import CombinedLoss
 from Scripts.losses import CharbonnierLoss
 from Scripts.utils.plot_utils import plot_training_curves
+from Scripts.attention_based_fusion import run_attention_fusion_inference
 
 def main():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -45,57 +48,57 @@ def main():
     val_loader = DataLoader(val_dataset, batch_size=1, shuffle=False)
     test_loader = DataLoader(test_dataset, batch_size=1, shuffle=False)
 
-    # Step 2: Train SRCNN model
-    print("Training SRCNN model...")
-    srcnn = SRCNN().to(device)
-    # Use plain MSE loss
-    loss_fn = nn.MSELoss()
+    # # Step 2: Train SRCNN model
+    # print("Training SRCNN model...")
+    # srcnn = SRCNN().to(device)
+    # # Use plain MSE loss
+    # loss_fn = nn.MSELoss()
 
-    trained_srcnn_model, srcnn_history, srcnn_test_metrics = train_val_test(
-        model=srcnn,
-        train_loader=train_loader,
-        val_loader=val_loader,
-        test_loader=test_loader,
-        loss_fn=loss_fn,
-        save_dir="checkpoints/srcnn_mse",
-        num_epochs=15,
-        lr=1e-4
-    )
-    print("Training complete. SRCNN model saved.")
-    print("Test metrics:", (srcnn_test_metrics))
+    # trained_srcnn_model, srcnn_history, srcnn_test_metrics = train_val_test(
+    #     model=srcnn,
+    #     train_loader=train_loader,
+    #     val_loader=val_loader,
+    #     test_loader=test_loader,
+    #     loss_fn=loss_fn,
+    #     save_dir="checkpoints/srcnn_mse",
+    #     num_epochs=15,
+    #     lr=1e-4
+    # )
+    # print("Training complete. SRCNN model saved.")
+    # print("Test metrics:", (srcnn_test_metrics))
 
-    # Step 3: Train SvOcSRCNN model
-    model = SvOcSRCNN()
-    loss_fn = CombinedLoss(alpha=0.8, device=device)
-    print("Training SvOcSRCNN model...")
-    trained_SvOcSRCNN_model, SvOcSRCNN_history, SvOcSRCNN_test_metrics = train_val_test(
-        model=model,
-        train_loader=train_loader,
-        val_loader=val_loader,
-        test_loader=test_loader,
-        loss_fn=loss_fn,
-        save_dir="checkpoints/svoc-perceptual",
-        num_epochs=15
-    )
-    print("Training complete. SvOcSRCNN model saved.")
-    print("Test metrics:", (SvOcSRCNN_test_metrics))
+    # # Step 3: Train SvOcSRCNN model
+    # model = SvOcSRCNN()
+    # loss_fn = CombinedLoss(alpha=0.8, device=device)
+    # print("Training SvOcSRCNN model...")
+    # trained_SvOcSRCNN_model, SvOcSRCNN_history, SvOcSRCNN_test_metrics = train_val_test(
+    #     model=model,
+    #     train_loader=train_loader,
+    #     val_loader=val_loader,
+    #     test_loader=test_loader,
+    #     loss_fn=loss_fn,
+    #     save_dir="checkpoints/svoc-perceptual",
+    #     num_epochs=15
+    # )
+    # print("Training complete. SvOcSRCNN model saved.")
+    # print("Test metrics:", (SvOcSRCNN_test_metrics))
 
-    # Step 4: Train VDSR_SA model
-    print("Training VDSR_SA model...")
-    vdsr_model = VDSR_SA().to(device)
-    loss_fn = nn.MSELoss()
-    tained_vdsr_sa_model, vdsr_sa_history, vdsr_sa_test_metrics = train_val_test(
-        model=vdsr_model,
-        train_loader=train_loader,
-        val_loader=val_loader,
-        test_loader=test_loader,
-        loss_fn=loss_fn,
-        save_dir="checkpoints/vdsr_sa",
-        num_epochs=15,
-        lr=1e-4
-    )
-    print("Training complete. VDSR_SA model saved.")
-    print("Test metrics:", (vdsr_sa_test_metrics))
+    # # Step 4: Train VDSR_SA model
+    # print("Training VDSR_SA model...")
+    # vdsr_model = VDSR_SA().to(device)
+    # loss_fn = nn.MSELoss()
+    # tained_vdsr_sa_model, vdsr_sa_history, vdsr_sa_test_metrics = train_val_test(
+    #     model=vdsr_model,
+    #     train_loader=train_loader,
+    #     val_loader=val_loader,
+    #     test_loader=test_loader,
+    #     loss_fn=loss_fn,
+    #     save_dir="checkpoints/vdsr_sa",
+    #     num_epochs=15,
+    #     lr=1e-4
+    # )
+    # print("Training complete. VDSR_SA model saved.")
+    # print("Test metrics:", (vdsr_sa_test_metrics))
 
 
     # === Train VDSR ===
@@ -138,14 +141,31 @@ def main():
     print("Training complete. RCAN model saved.")
     print("Test metrics:", (rcan_test_metrics))
 
-    print("\nBoth models trained. Ready for fusion inference.")
+# === Train FusionNet ===
+    fusion_net = FusionNet(in_channels=6)
+    print("\nStarting FusionNet Training...")
+    fusion_history = train_fusion_net(
+        fusion_net=fusion_net,
+        vdsr_model=tained_vdsr_model,
+        rcan_model=trained_rcan_model,
+        train_loader=train_loader,
+        val_loader=val_loader,
+        scale=2,
+        device=device,
+        save_dir="checkpoints/fusionnet",
+        num_epochs=10,
+        lr=1e-4
+    )
+    print("FusionNet training complete.")
+    print("\nAll models trained. Running attention-based fusion inference...")
 
-
-    plot_training_curves(srcnn_history, "checkpoints/srcnn_mse/training_plot.png")
-    plot_training_curves(SvOcSRCNN_history, "checkpoints/svoc-perceptual/training_plot.png")
-    plot_training_curves(vdsr_sa_history, "checkpoints/vdsr_sa/training_plot.png")
+    # plot_training_curves(srcnn_history, "checkpoints/srcnn_mse/training_plot.png")
+    # plot_training_curves(SvOcSRCNN_history, "checkpoints/svoc-perceptual/training_plot.png")
+    # plot_training_curves(vdsr_sa_history, "checkpoints/vdsr_sa/training_plot.png")
     plot_training_curves(vdsr_history, "checkpoints/vdsr/training_plot.png")
     plot_training_curves(rcan_history, "checkpoints/rcan/training_plot.png")
+    # === Run Fusion Inference ===
+    run_attention_fusion_inference(test_loader=test_loader, device=device)
 
     
 if __name__ == "__main__":
