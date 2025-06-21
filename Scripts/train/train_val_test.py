@@ -6,7 +6,7 @@ import tempfile
 from pathlib import Path
 
 # === Third-Party Libraries ===
-from PIL import Image
+from PIL import Image, ImageDraw, ImageFont, ImageFile
 import numpy as np
 import torch
 import torch.nn as nn
@@ -18,22 +18,13 @@ from torchmetrics.image.fid import FrechetInceptionDistance
 
 # === Local Modules ===
 from Scripts.utils.metric_utils import compute_psnr, compute_ssim_batch
-from Scripts.utils.plot_utils import annotate_image, create_collage
-
-def convert_to_builtin(obj):
-    if isinstance(obj, dict):
-        return {k: convert_to_builtin(v) for k, v in obj.items()}
-    elif isinstance(obj, list):
-        return [convert_to_builtin(i) for i in obj]
-    elif isinstance(obj, np.generic):
-        return obj.item()
-    else:
-        return obj
+from Scripts.utils.plot_utils import annotate_image, create_collage, create_multi_model_collage
 
 def train_val_test(model: nn.Module,
         train_loader,
         val_loader,
         test_loader,
+        model_name: str = "Model",
         loss_fn=nn.MSELoss(),
         optimizer_cls=torch.optim.Adam,
         lr=1e-4,
@@ -41,7 +32,8 @@ def train_val_test(model: nn.Module,
         device=None,
         save_dir=None,
         verbose=True,
-        val_fid_interval=5):
+        val_fid_interval=5,
+        forced_indices=None):
 
     device = device or ("cuda" if torch.cuda.is_available() else "cpu")
     model = model.to(device)
@@ -58,8 +50,9 @@ def train_val_test(model: nn.Module,
         for lr_img, hr_img in tqdm(train_loader, desc=f"Epoch {epoch+1}/{num_epochs}"):
             lr_img, hr_img = lr_img.to(device), hr_img.to(device)
             optimizer.zero_grad()
-            output = model(lr_img)
-            output = output.clamp(0, 1) # Ensure output is in [0, 1] range
+            upsampled = F.interpolate(lr_img, size=hr_img.shape[-2:], mode='bicubic', align_corners=False)
+            output = model(upsampled)
+            output = output.clamp(0, 1)
             loss = loss_fn(output, hr_img)
             loss.backward()
             optimizer.step()
@@ -68,13 +61,13 @@ def train_val_test(model: nn.Module,
         avg_train_loss = running_loss / len(train_loader)
         history['train_loss'].append(avg_train_loss)
 
-        # Validation
         model.eval()
         psnr_list, ssim_list = [], []
         with torch.no_grad():
             for lr_img, hr_img in val_loader:
                 lr_img, hr_img = lr_img.to(device), hr_img.to(device)
-                output = model(lr_img)
+                upsampled = F.interpolate(lr_img, size=hr_img.shape[-2:], mode='bicubic', align_corners=False)
+                output = model(upsampled)
                 psnr = compute_psnr(output, hr_img)
                 ssim = compute_ssim_batch(output, hr_img)
                 psnr_list.append(psnr)
@@ -85,14 +78,14 @@ def train_val_test(model: nn.Module,
         history['val_psnr'].append(val_psnr)
         history['val_ssim'].append(val_ssim)
 
-        # Optional FID computation on validation
         if (epoch + 1) % val_fid_interval == 0:
             fid_metric = FrechetInceptionDistance(feature=2048, normalize=True).to(device)
             with tempfile.TemporaryDirectory() as tmpdir:
                 for lr_img, hr_img in val_loader:
                     lr_img, hr_img = lr_img.to(device), hr_img.to(device)
                     with torch.no_grad():
-                        sr_img = model(lr_img)
+                        upsampled = F.interpolate(lr_img, size=hr_img.shape[-2:], mode='bicubic', align_corners=False)
+                        sr_img = model(upsampled)
                     sr_resized = F.interpolate(sr_img, size=(299, 299), mode='bilinear', align_corners=False)
                     hr_resized = F.interpolate(hr_img, size=(299, 299), mode='bilinear', align_corners=False)
                     fid_metric.update(sr_resized, real=False)
@@ -111,59 +104,57 @@ def train_val_test(model: nn.Module,
             best_val_psnr = val_psnr
             torch.save(model.state_dict(), os.path.join(save_dir, 'best_model.pth'))
 
-    # Final test evaluation including FID and selective image saving
     model.eval()
     psnr_list, ssim_list = [], []
-
-    # Save only N examples
-    N = 10
-    example_indices = random.sample(range(len(test_loader.dataset)), N) if len(test_loader.dataset) >= N else list(range(len(test_loader.dataset)))
-    saved_idx = 0
-
     collage_dir = Path(save_dir) / "collages"
     collage_dir.mkdir(parents=True, exist_ok=True)
 
-    temp_out = Path(tempfile.mkdtemp()) / "output"
-    temp_gt = Path(tempfile.mkdtemp()) / "gt"
-    temp_out.mkdir(parents=True, exist_ok=True)
-    temp_gt.mkdir(parents=True, exist_ok=True)
+    example_data = {}
+    example_img_dir = Path(save_dir) / "test_examples"
+    example_img_dir.mkdir(parents=True, exist_ok=True)
+
+    if forced_indices is None:
+        forced_indices = sorted(random.sample(range(len(test_loader.dataset)), 10))
+
+    dataset = test_loader.dataset
 
     with torch.no_grad():
-        for idx, (lr_img, hr_img) in enumerate(test_loader):
-            lr_img, hr_img = lr_img.to(device), hr_img.to(device)
-            output = model(lr_img)
+        for idx in forced_indices:
+            lr_img, hr_img = dataset[idx]
+            lr_img, hr_img = lr_img.unsqueeze(0).to(device), hr_img.unsqueeze(0).to(device)
+            upsampled = F.interpolate(lr_img, size=hr_img.shape[-2:], mode='bicubic', align_corners=False)
+            output = model(upsampled)
             psnr = compute_psnr(output, hr_img)
             ssim = compute_ssim_batch(output, hr_img)
             psnr_list.append(psnr)
             ssim_list.append(ssim)
 
-            save_image(output.clamp(0, 1), temp_out / f"{idx:05d}.png")
-            save_image(hr_img.clamp(0, 1), temp_gt / f"{idx:05d}.png")
+            collage = [TF.to_pil_image(t.squeeze(0).cpu()) for t in [lr_img, output, hr_img]]
+            collage_path = collage_dir / f"{idx:05d}_PSNR{psnr:.2f}_SSIM{ssim:.4f}.png"
+            create_collage(collage, collage_path)
 
-            if idx in example_indices:
-                caption = f"PSNR: {psnr:.2f}, SSIM: {ssim:.4f}"
-                lr_annot = annotate_image(lr_img, caption)
-                sr_annot = annotate_image(output, caption)
-                hr_annot = annotate_image(hr_img, caption)
+            lr_path = example_img_dir / f"{idx}_lr.png"
+            sr_path = example_img_dir / f"{idx}_sr.png"
+            hr_path = example_img_dir / f"{idx}_hr.png"
+            save_image(lr_img.clamp(0, 1), lr_path)
+            save_image(output.clamp(0, 1), sr_path)
+            save_image(hr_img.clamp(0, 1), hr_path)
 
-                collage = [TF.to_pil_image(t.squeeze(0).cpu()) for t in [lr_annot, sr_annot, hr_annot]]
-                collage_path = collage_dir / f"{saved_idx:05d}_PSNR{psnr:.2f}_SSIM{ssim:.4f}.png"
-                create_collage(collage, collage_path)
-
-                saved_idx += 1
+            example_data[idx] = {
+                "lr": str(lr_path),
+                "sr": str(sr_path),
+                "hr": str(hr_path),
+                "psnr": float(psnr),
+                "ssim": float(ssim)
+            }
 
     fid_metric = FrechetInceptionDistance(feature=2048, normalize=True).to(device)
     with torch.no_grad():
-        for fname in sorted(os.listdir(temp_out)):
-            sr_img = Image.open(temp_out / fname).convert('RGB')
-            hr_img = Image.open(temp_gt / fname).convert('RGB')
-
-            sr_tensor = TF.to_tensor(sr_img).unsqueeze(0).to(device)
-            hr_tensor = TF.to_tensor(hr_img).unsqueeze(0).to(device)
-
+        for entry in example_data.values():
+            sr_tensor = TF.to_tensor(Image.open(entry['sr']).convert("RGB")).unsqueeze(0).to(device)
+            hr_tensor = TF.to_tensor(Image.open(entry['hr']).convert("RGB")).unsqueeze(0).to(device)
             sr_tensor = F.interpolate(sr_tensor, size=(299, 299), mode='bilinear', align_corners=False)
             hr_tensor = F.interpolate(hr_tensor, size=(299, 299), mode='bilinear', align_corners=False)
-
             fid_metric.update(sr_tensor, real=False)
             fid_metric.update(hr_tensor, real=True)
 
@@ -183,6 +174,8 @@ def train_val_test(model: nn.Module,
 
     if save_dir:
         with open(os.path.join(save_dir, 'metrics.json'), 'w') as f:
-            json.dump(convert_to_builtin({**history, **final_metrics}), f, indent=2)
+            json.dump({**history, **final_metrics}, f, indent=2)
+        with open(os.path.join(save_dir, 'test_examples.json'), 'w') as f:
+            json.dump(example_data, f, indent=2)
 
     return model, history, final_metrics

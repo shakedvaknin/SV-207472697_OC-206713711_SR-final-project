@@ -42,6 +42,7 @@ dist/
 
 # Data directories
 /Data/DIV2K
+/Data/DIV2K_NORMALIZED
 *.json
 checkpoints/
 *.zip

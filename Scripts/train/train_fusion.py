@@ -5,40 +5,30 @@ from torchvision.utils import save_image
 from tqdm import tqdm
 import os
 
-from Models.VDSR import VDSR
-from Models.RCAN import RCAN
-from Models.FusionNet import FusionNet
-from Scripts.losses import CombinedLoss
 
 def train_fusion_net(
+    fusion_net,
     train_loader,
-    val_loader,
-    vdsr_ckpt="checkpoints/VDSR/best_model.pth",
-    rcan_ckpt="checkpoints/RCAN/best_model.pth",
+    optimizer,
+    loss_fn,
+    background_model,
+    object_model,
     fusion_ckpt_dir="checkpoints/FusionNet",
     scale=2,
     num_channels=3,
     num_epochs=30,
-    lr=1e-4,
-    alpha=0.8,
     device=None
 ):
     device = device or torch.device("cuda" if torch.cuda.is_available() else "cpu")
     os.makedirs(fusion_ckpt_dir, exist_ok=True)
 
-    # Load pretrained VDSR and RCAN
-    vdsr = VDSR(num_channels=num_channels).to(device)
-    vdsr.load_state_dict(torch.load(vdsr_ckpt, map_location=device))
-    vdsr.eval()
+    background_model = background_model.to(device)
+    background_model.eval()
 
-    rcan = RCAN(scale=scale, num_channels=num_channels).to(device)
-    rcan.load_state_dict(torch.load(rcan_ckpt, map_location=device))
-    rcan.eval()
+    object_model = object_model.to(device)
+    object_model.eval()
 
-    # Initialize FusionNet
-    fusion_net = FusionNet(in_channels=6).to(device)
-    optimizer = torch.optim.Adam(fusion_net.parameters(), lr=lr)
-    loss_fn = CombinedLoss(alpha=alpha, device=device)
+    fusion_net = fusion_net.to(device)
 
     # Training loop
     for epoch in range(num_epochs):
@@ -50,12 +40,12 @@ def train_fusion_net(
             lr_up = F.interpolate(lr_img, scale_factor=scale, mode="bicubic", align_corners=False)
 
             with torch.no_grad():
-                out_vdsr = vdsr(lr_up).clamp(0, 1)
-                out_rcan = rcan(lr_img).clamp(0, 1)
+                out_background = background_model(lr_up).clamp(0, 1)
+                out_object = object_model(lr_img).clamp(0, 1)
 
-            fusion_input = torch.cat([out_vdsr, out_rcan], dim=1)
+            fusion_input = torch.cat([out_background, out_object], dim=1)
             mask = fusion_net(fusion_input).sigmoid()
-            out_fused = (1 - mask) * out_vdsr + mask * out_rcan
+            out_fused = (1 - mask) * out_background + mask * out_object
 
             loss = loss_fn(out_fused, hr_img)
             optimizer.zero_grad()

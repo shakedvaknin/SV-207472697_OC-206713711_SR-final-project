@@ -52,10 +52,10 @@ class ResidualGroup(nn.Module):
         return res + x
 
 # -------------------------
-# RCAN Main Model
+# RCAN Main Model (with internal upsampling)
 # -------------------------
 class RCAN(nn.Module):
-    def __init__(self, scale=2, num_channels=3, n_resgroups=10, n_RCAB=20, channel=64):
+    def __init__(self, scale=4, num_channels=3, n_resgroups=10, n_RCAB=20, channel=64):
         super(RCAN, self).__init__()
         self.head = nn.Conv2d(num_channels, channel, 3, padding=1)
 
