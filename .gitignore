@@ -44,3 +44,4 @@ dist/
 /Data/DIV2K
 *.json
 checkpoints/
+*.zip

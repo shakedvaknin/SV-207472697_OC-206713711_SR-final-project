@@ -1,6 +1,5 @@
 import sys
 import os
-import json
 import numpy as np
 import torch
 import torch.nn as nn
@@ -21,7 +20,6 @@ from Scripts.utils.plot_utils import plot_training_curves
 
 def main():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    results = {}
     download_div2k_flag = False
 
     # Step 1: Download and prepare dataset
@@ -57,7 +55,7 @@ def main():
         test_loader=test_loader,
         loss_fn=loss_fn,
         save_dir="checkpoints/srcnn_mse",
-        num_epochs=1,
+        num_epochs=50,
         lr=1e-4
     )
     print("Training complete. SRCNN model saved.")
@@ -74,7 +72,7 @@ def main():
         test_loader=test_loader,
         loss_fn=loss_fn,
         save_dir="checkpoints/svoc-perceptual",
-        num_epochs=1
+        num_epochs=50
     )
     print("Training complete. SvOcSRCNN model saved.")
     print("Test metrics:", (SvOcSRCNN_test_metrics))
