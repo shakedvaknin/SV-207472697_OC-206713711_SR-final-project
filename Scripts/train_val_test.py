@@ -59,6 +59,7 @@ def train_val_test(model: nn.Module,
             lr_img, hr_img = lr_img.to(device), hr_img.to(device)
             optimizer.zero_grad()
             output = model(lr_img)
+            output = output.clamp(0, 1) # Ensure output is in [0, 1] range
             loss = loss_fn(output, hr_img)
             loss.backward()
             optimizer.step()
