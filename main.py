@@ -13,9 +13,12 @@ from Data.data_utils import download_div2k
 from Models.SRCNN_model import SRCNN
 from Models.SvOcSRCNN_model import SvOcSRCNN
 from Models.VDSR_Attention import VDSR_SA
+from Models.VDSR import VDSR
+from Models.RCAN import RCAN
 
 from Scripts.train_val_test import train_val_test
 from Scripts.losses import CombinedLoss
+from Scripts.losses import CharbonnierLoss
 from Scripts.utils.plot_utils import plot_training_curves
 
 def main():
@@ -55,7 +58,7 @@ def main():
         test_loader=test_loader,
         loss_fn=loss_fn,
         save_dir="checkpoints/srcnn_mse",
-        num_epochs=50,
+        num_epochs=15,
         lr=1e-4
     )
     print("Training complete. SRCNN model saved.")
@@ -72,7 +75,7 @@ def main():
         test_loader=test_loader,
         loss_fn=loss_fn,
         save_dir="checkpoints/svoc-perceptual",
-        num_epochs=50
+        num_epochs=15
     )
     print("Training complete. SvOcSRCNN model saved.")
     print("Test metrics:", (SvOcSRCNN_test_metrics))
@@ -88,11 +91,48 @@ def main():
         test_loader=test_loader,
         loss_fn=loss_fn,
         save_dir="checkpoints/vdsr_sa",
-        num_epochs=50,
+        num_epochs=15,
         lr=1e-4
     )
     print("Training complete. VDSR_SA model saved.")
     print("Test metrics:", (vdsr_test_metrics))
+
+
+    # === Train VDSR ===
+    vdsr = VDSR(num_channels=3)
+    vdsr_loss = CharbonnierLoss()
+    print("\nStarting VDSR Training...")
+    train_val_test(
+        model=vdsr,
+        train_loader=train_loader,
+        val_loader=val_loader,
+        test_loader=test_loader,
+        loss_fn=vdsr_loss,
+        lr=1e-4,
+        num_epochs=15,
+        device=device,
+        save_dir="checkpoints/VDSR",
+        verbose=True
+    )
+
+    # === Train RCAN ===
+    rcan = RCAN(scale=2, num_channels=3)
+    rcan_loss = CombinedLoss(alpha=0.8, device=device)
+    print("\nStarting RCAN Training...")
+    train_val_test(
+        model=rcan,
+        train_loader=train_loader,
+        val_loader=val_loader,
+        test_loader=test_loader,
+        loss_fn=rcan_loss,
+        lr=1e-4,
+        num_epochs=15,
+        device=device,
+        save_dir="checkpoints/RCAN",
+        verbose=True
+    )  
+
+    print("\nBoth models trained. Ready for fusion inference.")
 
 
     plot_training_curves(srcnn_history, "checkpoints/srcnn_mse/training_plot.png")
