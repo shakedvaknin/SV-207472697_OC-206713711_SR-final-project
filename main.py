@@ -84,7 +84,7 @@ def main():
     print("Training VDSR_SA model...")
     vdsr_model = VDSR_SA().to(device)
     loss_fn = nn.MSELoss()
-    tained_vdsr_model, vdsr_history, vdsr_test_metrics = train_val_test(
+    tained_vdsr_sa_model, vdsr_sa_history, vdsr_sa_test_metrics = train_val_test(
         model=vdsr_model,
         train_loader=train_loader,
         val_loader=val_loader,
@@ -95,14 +95,14 @@ def main():
         lr=1e-4
     )
     print("Training complete. VDSR_SA model saved.")
-    print("Test metrics:", (vdsr_test_metrics))
+    print("Test metrics:", (vdsr_sa_test_metrics))
 
 
     # === Train VDSR ===
     vdsr = VDSR(num_channels=3)
     vdsr_loss = CharbonnierLoss()
     print("\nStarting VDSR Training...")
-    train_val_test(
+    tained_vdsr_model, vdsr_history, vdsr_test_metrics = train_val_test(
         model=vdsr,
         train_loader=train_loader,
         val_loader=val_loader,
@@ -111,15 +111,18 @@ def main():
         lr=1e-4,
         num_epochs=15,
         device=device,
-        save_dir="checkpoints/VDSR",
+        save_dir="checkpoints/vdsr",
         verbose=True
     )
+
+    print("Training complete. VDSR model saved.")
+    print("Test metrics:", (vdsr_test_metrics))
 
     # === Train RCAN ===
     rcan = RCAN(scale=2, num_channels=3)
     rcan_loss = CombinedLoss(alpha=0.8, device=device)
     print("\nStarting RCAN Training...")
-    train_val_test(
+    trained_rcan_model, rcan_history, rcan_test_metrics= train_val_test(
         model=rcan,
         train_loader=train_loader,
         val_loader=val_loader,
@@ -128,16 +131,22 @@ def main():
         lr=1e-4,
         num_epochs=15,
         device=device,
-        save_dir="checkpoints/RCAN",
+        save_dir="checkpoints/rcan",
         verbose=True
     )  
+
+    print("Training complete. RCAN model saved.")
+    print("Test metrics:", (rcan_test_metrics))
 
     print("\nBoth models trained. Ready for fusion inference.")
 
 
     plot_training_curves(srcnn_history, "checkpoints/srcnn_mse/training_plot.png")
     plot_training_curves(SvOcSRCNN_history, "checkpoints/svoc-perceptual/training_plot.png")
-    plot_training_curves(vdsr_history, "checkpoints/vdsr_sa/training_plot.png")
+    plot_training_curves(vdsr_sa_history, "checkpoints/vdsr_sa/training_plot.png")
+    plot_training_curves(vdsr_history, "checkpoints/vdsr/training_plot.png")
+    plot_training_curves(rcan_history, "checkpoints/rcan/training_plot.png")
+
     
 if __name__ == "__main__":
     main()
