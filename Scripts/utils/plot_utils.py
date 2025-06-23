@@ -29,34 +29,14 @@ def create_collage(images, save_path):
     collage.save(save_path)
 
 
-# === Training Curves Plot ===
-def plot_training_curves(history, save_path=None):
-
-    epochs = range(1, len(history['train_loss']) + 1)
-    plt.figure(figsize=(12, 6))
-    plt.plot(epochs, history['train_loss'], label='Train Loss')
-    if 'val_loss' in history:
-        plt.plot(epochs, history['val_loss'], label='Val Loss')
-    plt.plot(epochs, history['val_psnr'], label='Val PSNR')
-    plt.plot(epochs, history['val_ssim'], label='Val SSIM')
-    if any(history.get('val_fid', [])):
-        plt.plot(epochs, [fid if fid is not None else np.nan for fid in history['val_fid']], label='Val FID')
-    plt.xlabel('Epoch')
-    plt.ylabel('Metric')
-    plt.legend()
-    plt.title("Training Curves")
-    if save_path:
-        plt.savefig(save_path)
-    plt.show()
-
-def generate_summary_collage_from_checkpoints(checkpoints_root="checkpoints", output_dir="checkpoints/summary_collages"):
-    model_dirs = [d for d in os.listdir(checkpoints_root) if os.path.isdir(os.path.join(checkpoints_root, d)) and d != "summary_collages"]
+def generate_summary_collage_from_checkpoints(outputs_root="outputs", output_dir="outputs/summary_collages"):
+    model_dirs = [d for d in os.listdir(outputs_root) if os.path.isdir(os.path.join(outputs_root, d)) and d != "summary_collages"]
 
     all_model_outputs = {}
     if not os.path.exists(output_dir):
         os.makedirs(output_dir, exist_ok=True)
     for model_name in model_dirs:
-        json_path = os.path.join(checkpoints_root, model_name, "test_examples.json")
+        json_path = os.path.join(outputs_root, model_name, "test_examples.json")
         if not os.path.exists(json_path):
             print(f"Skipping {model_name}, no test_examples.json found.")
             continue
@@ -78,7 +58,7 @@ def generate_summary_collage_from_checkpoints(checkpoints_root="checkpoints", ou
     create_multi_model_collage()
 
 
-def create_multi_model_collage(root_dir: str = "checkpoints", font_path: str = None, font_size: int = 22):
+def create_multi_model_collage(root_dir: str = "outputs", font_path: str = None, font_size: int = 22):
     """
     Generates a comparison collage of model outputs from multiple models.
     Each row represents an example index, and each column represents a model's SR image with LR and HR as the first two columns.

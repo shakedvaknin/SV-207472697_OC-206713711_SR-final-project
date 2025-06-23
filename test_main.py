@@ -105,6 +105,7 @@ def main():
         train_loader=train_loader,
         val_loader=val_loader,
         test_loader=test_loader,
+        model_name=args["model"],
         loss_fn=loss_fn,
         save_dir=args["save_dir"],
         num_epochs=args["epochs"],

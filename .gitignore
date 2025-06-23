@@ -45,5 +45,6 @@ dist/
 /Data/DIV2K_NORMALIZED
 *.json
 checkpoints/
+outputs/
 *.zip
 *.csv

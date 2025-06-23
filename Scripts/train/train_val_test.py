@@ -111,7 +111,7 @@ def train_val_test(model: nn.Module,
 
         if save_dir and val_psnr > best_val_psnr:
             best_val_psnr = val_psnr
-            torch.save(model.state_dict(), os.path.join(save_dir, 'best_model.pth'))
+            torch.save(model.state_dict(), os.path.join("checkpoints/", model_name + "_best_model.pth"))
 
     # === Final Testing ===
     model.eval()
