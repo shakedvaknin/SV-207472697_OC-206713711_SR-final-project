@@ -27,8 +27,8 @@ from Models.FusionNet import FusionNet
 from Scripts.train.train_fusion import train_fusion_net
 from Scripts.train.train_val_test import train_val_test
 from Scripts.train.train_no_upsample import train_no_upsample
-from Scripts.losses import CombinedLoss
-from Scripts.losses import CharbonnierLoss
+from Scripts.utils.losses import CombinedLoss
+from Scripts.utils.losses import CharbonnierLoss
 from Scripts.utils.plot_utils import plot_training_curves, generate_summary_collage_from_checkpoints
 from Scripts.attention_based_fusion import run_attention_fusion_inference
 
