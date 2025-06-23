@@ -1,4 +1,3 @@
-# Scripts/utils/result_logger.py
 import csv
 import os
 import time
