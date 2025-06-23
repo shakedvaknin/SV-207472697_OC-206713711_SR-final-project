@@ -75,7 +75,7 @@ def generate_summary_collage_from_checkpoints(checkpoints_root="checkpoints", ou
                 "ssim": entry["ssim"]
             }
     # Create the collage
-    create_multi_model_collage(output_path = output_dir)
+    create_multi_model_collage()
 
 
 def create_multi_model_collage(root_dir: str = "checkpoints", font_path: str = None, font_size: int = 22):
