@@ -62,7 +62,7 @@ def main():
 
     forced_indices = sorted(random.sample(range(len(test_dataset)), 10))
     loss_fn = get_loss_fn(args["loss"], device)
-
+    # Initialize the model based on the configuration
     if args["model"] == "SRCNN":
         model = SRCNN().to(device)
         trainer = train_val_test
@@ -78,6 +78,8 @@ def main():
     elif args["model"] == "RCAN":
         model = RCAN(num_channels=3, scale=args["scale"]).to(device)
         optimizer = torch.optim.Adam(model.parameters(), lr=1e-4)
+        # If the model is RCAN, we need to train it without upsampling
+        print("Training RCAN without upsampling...")
         trained_model, history, metrics = train_no_upsample(
             model=model,
             train_loader=train_loader,
@@ -92,14 +94,53 @@ def main():
             forced_indices=forced_indices,
             verbose=True
         )
+        print("RCAN training completed.")
         if args["use_wandb"]:
             wandb.log(metrics)
         log_result(args["model"], args["loss"], metrics, args["save_dir"])
 
         return
+    # If the model is FusionNet, we need to load VDSR and RCAN checkpoints
     elif args["model"] == "FusionNet":
-        print("FusionNet should be trained after VDSR and RCAN.")
+        vdsr_ckpt = Path("checkpoints/vdsr_best_model.pth")
+        rcan_ckpt = Path("checkpoints/RCAN_best_model.pth")
+
+        if not vdsr_ckpt.exists() or not rcan_ckpt.exists():
+            print("❌ Required checkpoints for VDSR and/or RCAN not found. Train them first.")
+            return
+
+        print("✅ Found checkpoints. Loading VDSR and RCAN...")
+
+        vdsr_model = VDSR(num_channels=3)
+        vdsr_model.load_state_dict(torch.load(vdsr_ckpt, map_location=device))
+
+        rcan_model = RCAN(num_channels=3, scale=args["scale"])
+        rcan_model.load_state_dict(torch.load(rcan_ckpt, map_location=device))
+
+        from Models.FusionNet import FusionNet
+        fusion_model = FusionNet(in_channels=6, out_channels=3)  # 3 from VDSR + 3 from RCAN
+        fusion_model.to(device)
+
+        fusion_optimizer = torch.optim.Adam(fusion_model.parameters(), lr=1e-4)
+        fusion_loss_fn = get_loss_fn(args["loss"], device)
+        print("✅ Loaded VDSR and RCAN models.")
+        train_fusion_net(
+            fusion_net=fusion_model,
+            train_loader=train_loader,
+            optimizer=fusion_optimizer,
+            loss_fn=fusion_loss_fn,
+            background_model=rcan_model,
+            object_model=vdsr_model,
+            fusion_ckpt_dir=args["save_dir"],
+            scale=args["scale"],
+            device=device,
+            num_epochs=args["epochs"]
+        )
+        print("FusionNet training completed.")
         return
+
+    # If the model is not FusionNet or RCAN, we proceed with the standard training
+    print(f"Training model: {args['model']} with loss: {args['loss']}")
 
     trained_model, history, metrics = trainer(
         model=model,
@@ -113,6 +154,7 @@ def main():
         device=device,
         forced_indices=forced_indices
     )
+    print(f"Training completed for model: {args['model']}")
 
     if args["use_wandb"]:
         wandb.log(metrics)
