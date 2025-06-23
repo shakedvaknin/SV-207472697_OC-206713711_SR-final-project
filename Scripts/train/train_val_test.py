@@ -1,12 +1,9 @@
-# === Standard Library ===
 import json
 import os
 import random
 import tempfile
 from pathlib import Path
-
-# === Third-Party Libraries ===
-from PIL import Image, ImageDraw, ImageFont, ImageFile
+from PIL import Image
 import numpy as np
 import torch
 import torch.nn as nn
@@ -16,9 +13,10 @@ import torchvision.transforms.functional as TF
 from torchvision.utils import save_image
 from torchmetrics.image.fid import FrechetInceptionDistance
 
-# === Local Modules ===
+import wandb
+
 from Scripts.utils.metric_utils import compute_psnr, compute_ssim_batch
-from Scripts.utils.plot_utils import annotate_image, create_collage, create_multi_model_collage
+from Scripts.utils.plot_utils import create_collage
 
 def train_val_test(model: nn.Module,
         train_loader,
@@ -33,7 +31,8 @@ def train_val_test(model: nn.Module,
         save_dir=None,
         verbose=True,
         val_fid_interval=5,
-        forced_indices=None):
+        forced_indices=None,
+        use_wandb=False):
 
     device = device or ("cuda" if torch.cuda.is_available() else "cpu")
     model = model.to(device)
@@ -52,10 +51,10 @@ def train_val_test(model: nn.Module,
             optimizer.zero_grad()
             upsampled = F.interpolate(lr_img, size=hr_img.shape[-2:], mode='bicubic', align_corners=False)
             output = model(upsampled)
-            output = output.clamp(0, 1)
             loss = loss_fn(output, hr_img)
             loss.backward()
             optimizer.step()
+            output = output.clamp(0, 1)
             running_loss += loss.item()
 
         avg_train_loss = running_loss / len(train_loader)
@@ -67,7 +66,7 @@ def train_val_test(model: nn.Module,
             for lr_img, hr_img in val_loader:
                 lr_img, hr_img = lr_img.to(device), hr_img.to(device)
                 upsampled = F.interpolate(lr_img, size=hr_img.shape[-2:], mode='bicubic', align_corners=False)
-                output = model(upsampled)
+                output = model(upsampled).clamp(0, 1)
                 psnr = compute_psnr(output, hr_img)
                 ssim = compute_ssim_batch(output, hr_img)
                 psnr_list.append(psnr)
@@ -85,7 +84,7 @@ def train_val_test(model: nn.Module,
                     lr_img, hr_img = lr_img.to(device), hr_img.to(device)
                     with torch.no_grad():
                         upsampled = F.interpolate(lr_img, size=hr_img.shape[-2:], mode='bicubic', align_corners=False)
-                        sr_img = model(upsampled)
+                        sr_img = model(upsampled).clamp(0, 1)
                     sr_resized = F.interpolate(sr_img, size=(299, 299), mode='bilinear', align_corners=False)
                     hr_resized = F.interpolate(hr_img, size=(299, 299), mode='bilinear', align_corners=False)
                     fid_metric.update(sr_resized, real=False)
@@ -95,15 +94,26 @@ def train_val_test(model: nn.Module,
                 if verbose:
                     print(f"Val FID (epoch {epoch+1}): {val_fid:.4f}")
         else:
+            val_fid = None
             history['val_fid'].append(None)
 
         if verbose:
             print(f"Epoch {epoch+1}: Train Loss={avg_train_loss:.4f}, Val PSNR={val_psnr:.2f}, SSIM={val_ssim:.4f}")
 
+        if use_wandb:
+            wandb.log({
+                "epoch": epoch + 1,
+                "train_loss": avg_train_loss,
+                "val_psnr": val_psnr,
+                "val_ssim": val_ssim,
+                "val_fid": val_fid
+            })
+
         if save_dir and val_psnr > best_val_psnr:
             best_val_psnr = val_psnr
             torch.save(model.state_dict(), os.path.join(save_dir, 'best_model.pth'))
 
+    # === Final Testing ===
     model.eval()
     psnr_list, ssim_list = [], []
     collage_dir = Path(save_dir) / "collages"
@@ -123,7 +133,7 @@ def train_val_test(model: nn.Module,
             lr_img, hr_img = dataset[idx]
             lr_img, hr_img = lr_img.unsqueeze(0).to(device), hr_img.unsqueeze(0).to(device)
             upsampled = F.interpolate(lr_img, size=hr_img.shape[-2:], mode='bicubic', align_corners=False)
-            output = model(upsampled)
+            output = model(upsampled).clamp(0, 1)
             psnr = compute_psnr(output, hr_img)
             ssim = compute_ssim_batch(output, hr_img)
             psnr_list.append(psnr)
@@ -171,6 +181,9 @@ def train_val_test(model: nn.Module,
         print("PSNR:", final_metrics['test_psnr'])
         print("SSIM:", final_metrics['test_ssim'])
         print("FID :", final_metrics['test_fid'])
+
+    if use_wandb:
+        wandb.log(final_metrics)
 
     if save_dir:
         with open(os.path.join(save_dir, 'metrics.json'), 'w') as f:

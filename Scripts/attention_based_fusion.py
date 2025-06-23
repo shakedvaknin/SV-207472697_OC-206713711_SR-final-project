@@ -44,7 +44,7 @@ def attention_fusion(
 
 def run_attention_fusion_inference(
     test_loader,
-    output_dir="fusion_results_attention",
+    output_dir="checkpoints/fusion_results_attention",
     vdsr_ckpt="checkpoints/VDSR/best_model.pth",
     rcan_ckpt="checkpoints/RCAN/best_model.pth",
     fusion_ckpt="checkpoints/FusionNet/best_model.pth",
