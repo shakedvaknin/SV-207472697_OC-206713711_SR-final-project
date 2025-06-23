@@ -20,8 +20,8 @@ from Models.FusionNet import FusionNet
 from Scripts.train.train_val_test import train_val_test
 from Scripts.train.train_no_upsample import train_no_upsample
 from Scripts.train.train_fusion import train_fusion_net
-from Scripts.losses import CombinedLoss, CharbonnierLoss
-from Scripts.utils.plot_utils import plot_training_curves, generate_summary_collage_from_checkpoints
+from Scripts.utils.losses import CombinedLoss, CharbonnierLoss
+from Scripts.utils.plot_utils import generate_summary_collage_from_checkpoints
 from Scripts.attention_based_fusion import run_attention_fusion_inference
 from Scripts.utils.result_logger import log_result
 
@@ -116,7 +116,6 @@ def main():
     if args["use_wandb"]:
         wandb.log(metrics)
     log_result(args["model"], args["loss"], metrics, args["save_dir"])
-    # plot_training_curves(history, Path(args["save_dir"]) / "training_plot.png")
     generate_summary_collage_from_checkpoints()
 
 if __name__ == "__main__":
