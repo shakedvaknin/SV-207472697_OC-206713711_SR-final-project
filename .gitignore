@@ -46,3 +46,4 @@ dist/
 *.json
 checkpoints/
 *.zip
+*.csv
