@@ -1,0 +1,7 @@
+model: SRCNN         # Options: SRCNN, SvOcSRCNN, VDSR_SA, VDSR, RCAN
+epochs: 20
+scale: 4             # Upscaling factor (e.g., 2, 4)
+loss: mse            # Options: mse, charbonnier, combined
+save_dir: checkpoints/srcnn_mse
+use_wandb: false
+batch_size: 4
