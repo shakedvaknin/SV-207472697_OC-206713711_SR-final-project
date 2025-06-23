@@ -22,7 +22,8 @@ def train_no_upsample(
     test_loader,
     optimizer,
     loss_fn,
-    save_dir="checkpoints/rcan",
+    save_dir,
+    checkpoint_dir="checkpoints",
     model_name="RCAN",
     num_epochs=20,
     val_fid_interval=5,
@@ -84,9 +85,10 @@ def train_no_upsample(
         if verbose:
             print(f"Epoch {epoch+1}: Train Loss={avg_train_loss:.4f}, Val PSNR={val_psnr:.2f}, SSIM={val_ssim:.4f}")
 
-        if save_dir and val_psnr > best_val_psnr:
+        if checkpoint_dir and val_psnr > best_val_psnr:
+
             best_val_psnr = val_psnr
-            torch.save(model.state_dict(), os.path.join(save_dir, 'best_model.pth'))
+            torch.save(model.state_dict(), os.path.join(checkpoint_dir, model_name + '_best_model.pth'))
 
     model.eval()
     psnr_list, ssim_list = [], []

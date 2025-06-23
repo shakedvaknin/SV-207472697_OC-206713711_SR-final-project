@@ -85,7 +85,7 @@ def main():
             test_loader=test_loader,
             optimizer=optimizer,
             loss_fn=loss_fn,
-            model_name="RCAN",
+            model_name=args["model"],
             save_dir=args["save_dir"],
             num_epochs=args["epochs"],
             device=device,
@@ -95,6 +95,7 @@ def main():
         if args["use_wandb"]:
             wandb.log(metrics)
         log_result(args["model"], args["loss"], metrics, args["save_dir"])
+
         return
     elif args["model"] == "FusionNet":
         print("FusionNet should be trained after VDSR and RCAN.")
@@ -116,6 +117,7 @@ def main():
     if args["use_wandb"]:
         wandb.log(metrics)
     log_result(args["model"], args["loss"], metrics, args["save_dir"])
+    
     generate_summary_collage_from_checkpoints()
 
 if __name__ == "__main__":
