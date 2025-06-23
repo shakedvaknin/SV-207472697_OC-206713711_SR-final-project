@@ -4,7 +4,7 @@ import uuid
 import requests
 from tqdm import tqdm
 import torchvision.utils as vutils
-from PIL import ImageFile
+from PIL import Image, ImageFile
 ImageFile.LOAD_TRUNCATED_IMAGES = True
 
 def download_div2k(destination="data"):
@@ -57,6 +57,45 @@ def download_div2k(destination="data"):
         os.rmdir(extract_temp)
         print("Files flattened and duplicates removed.")
 
+def preprocess_div2k_center_crop(source_folder="Data/DIV2K", target_folder="Data/DIV2K_CROPPED", patch_size=(512, 512)):
+    """
+    Extracts a centered patch of size `patch_size` (default 512x512) from each image in 'source_folder'
+    and saves the patch to 'target_folder'. Skips corrupted or incompatible images.
+    """
+    if not os.path.exists(target_folder):
+        os.makedirs(target_folder, exist_ok=True)
+
+    print(f"Cropping center patches of size {patch_size}...")
+
+    for img_name in os.listdir(source_folder):
+        img_path = os.path.join(source_folder, img_name)
+        target_path = os.path.join(target_folder, img_name)
+
+        try:
+            with Image.open(img_path) as img:
+                img.load()  # Ensure full image is read
+
+                width, height = img.size
+                crop_width, crop_height = patch_size
+
+                if width < crop_width or height < crop_height:
+                    print(f"Skipping {img_name}: image too small ({width}x{height})")
+                    continue
+
+                left = (width - crop_width) // 2
+                upper = (height - crop_height) // 2
+                right = left + crop_width
+                lower = upper + crop_height
+
+                cropped_img = img.crop((left, upper, right, lower))
+                cropped_img.save(target_path)
+
+        except Exception as e:
+            print(f"Skipping {img_name}: {e}")
+
+    print("Center cropping complete. Cropped patches saved to:", target_folder)
+
+
 def preprocess_div2k(source_folder="Data/DIV2K", target_folder="Data/DIV2K_NORMALIZED", standard_size=(2048, 1408)):
     """
     Resizes all images in 'source_folder' to a fixed standard resolution (default 2048x1408)
@@ -72,9 +111,9 @@ def preprocess_div2k(source_folder="Data/DIV2K", target_folder="Data/DIV2K_NORMA
         target_path = os.path.join(target_folder, img_name)
 
         try:
-            with ImageFile.open(img_path) as img:
+            with Image.open(img_path) as img:
                 img.load()  # 🔹 Ensure full image is read to trigger exception if corrupted
-                img = img.resize(standard_size, ImageFile.BICUBIC)
+                img = img.resize(standard_size, Image.BICUBIC)
                 img.save(target_path)
         except Exception as e:
             print(f"Skipping {img_name}: {e}")
