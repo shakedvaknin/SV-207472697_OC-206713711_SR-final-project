@@ -98,29 +98,22 @@ def main():
         if args["use_wandb"]:
             wandb.log(metrics)
         log_result(args["model"], args["loss"], metrics, args["save_dir"])
-
+        generate_summary_collage_from_checkpoints()
         return
     # If the model is FusionNet, we need to load VDSR and RCAN checkpoints
     elif args["model"] == "FusionNet":
         vdsr_ckpt = Path("checkpoints/vdsr_best_model.pth")
         rcan_ckpt = Path("checkpoints/RCAN_best_model.pth")
-
         if not vdsr_ckpt.exists() or not rcan_ckpt.exists():
             print("❌ Required checkpoints for VDSR and/or RCAN not found. Train them first.")
             return
-
         print("✅ Found checkpoints. Loading VDSR and RCAN...")
-
         vdsr_model = VDSR(num_channels=3)
         vdsr_model.load_state_dict(torch.load(vdsr_ckpt, map_location=device))
-
         rcan_model = RCAN(num_channels=3, scale=args["scale"])
         rcan_model.load_state_dict(torch.load(rcan_ckpt, map_location=device))
-
-        from Models.FusionNet import FusionNet
         fusion_model = FusionNet(in_channels=6, out_channels=3)  # 3 from VDSR + 3 from RCAN
         fusion_model.to(device)
-
         fusion_optimizer = torch.optim.Adam(fusion_model.parameters(), lr=1e-4)
         fusion_loss_fn = get_loss_fn(args["loss"], device)
         print("✅ Loaded VDSR and RCAN models.")
@@ -137,6 +130,7 @@ def main():
             num_epochs=args["epochs"]
         )
         print("FusionNet training completed.")
+        generate_summary_collage_from_checkpoints()
         return
 
     # If the model is not FusionNet or RCAN, we proceed with the standard training
