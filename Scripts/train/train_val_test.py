@@ -37,6 +37,7 @@ def train_val_test(model: nn.Module,
     device = device or ("cuda" if torch.cuda.is_available() else "cpu")
     model = model.to(device)
     optimizer = optimizer_cls(model.parameters(), lr=lr)
+    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.5, patience=5)
     best_val_psnr = 0
     history = {'train_loss': [], 'val_psnr': [], 'val_ssim': [], 'val_fid': []}
 
@@ -58,6 +59,7 @@ def train_val_test(model: nn.Module,
             running_loss += loss.item()
 
         avg_train_loss = running_loss / len(train_loader)
+        scheduler.step(avg_train_loss)
         history['train_loss'].append(avg_train_loss)
 
         model.eval()

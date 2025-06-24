@@ -33,6 +33,8 @@ def train_no_upsample(
 ):
     device = device or ("cuda" if torch.cuda.is_available() else "cpu")
     model = model.to(device)
+    optimizer = optimizer
+    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.5, patience=5)
 
     os.makedirs(save_dir, exist_ok=True)
     best_val_psnr = 0
@@ -52,6 +54,7 @@ def train_no_upsample(
             running_loss += loss.item()
 
         avg_train_loss = running_loss / len(train_loader)
+        scheduler.step(avg_train_loss)
         history['train_loss'].append(avg_train_loss)
 
         model.eval()
