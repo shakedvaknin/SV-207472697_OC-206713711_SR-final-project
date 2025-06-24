@@ -1,7 +1,7 @@
-model: RCAN         # Options: SRCNN, SvOcSRCNN, VDSR_SA, VDSR, RCAN
-epochs: 1
+model: dsrcnn_ca         # Options: SRCNN, SvOcSRCNN, VDSR_SA, VDSR, RCAN, dsrcnn_ca
+epochs: 20
 scale: 4            # Upscaling factor (e.g., 2, 4)
 loss: combined           # Options: mse, charbonnier, combined
-save_dir: outputs/rcan
+save_dir: outputs/dsrcnn_ca
 use_wandb: false
-batch_size: 8
+batch_size: 4

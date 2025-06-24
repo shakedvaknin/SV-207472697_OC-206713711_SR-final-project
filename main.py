@@ -16,6 +16,7 @@ from Models.VDSR_Attention import VDSR_SA
 from Models.VDSR import VDSR
 from Models.RCAN import RCAN
 from Models.FusionNet import FusionNet
+from Models.dsrcnn_ca import PyramidDeepSRCNN_CA
 
 from Scripts.train.train_val_test import train_val_test
 from Scripts.train.train_no_upsample import train_no_upsample
@@ -74,6 +75,9 @@ def main():
         trainer = train_val_test
     elif args["model"] == "VDSR":
         model = VDSR(num_channels=3).to(device)
+        trainer = train_val_test
+    elif args["model"] == "dsrcnn_ca":
+        model = PyramidDeepSRCNN_CA(num_channels=3).to(device)
         trainer = train_val_test
     elif args["model"] == "RCAN":
         model = RCAN(num_channels=3, scale=args["scale"]).to(device)
