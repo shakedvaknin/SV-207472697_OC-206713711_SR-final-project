@@ -10,7 +10,13 @@ class VDSR_SA(nn.Module):
         self.resblocks = nn.Sequential(
             *[ResidualBlockSA(num_features) for _ in range(num_resblocks)]
         )
-        self.output_conv = nn.Conv2d(num_features, num_channels, kernel_size=3, padding=1)
+        #self.output_conv = nn.Conv2d(num_features, num_channels, kernel_size=3, padding=1)
+        self.output_conv = nn.Sequential(
+            nn.Conv2d(num_features, num_features // 2, 3, padding=1),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(num_features // 2, num_channels, 3, padding=1)
+        )
+
 
     def forward(self, x):
         out = self.relu(self.input_conv(x))
@@ -39,16 +45,17 @@ class SpatialAttention(nn.Module):
         super().__init__()
         assert kernel_size in (3, 7), "Kernel size must be 3 or 7"
         padding = (kernel_size - 1) // 2
-        
+
         # Compress channels using max-pool and avg-pool and concatenate
         self.conv = nn.Conv2d(2, 1, kernel_size=kernel_size, padding=padding, bias=False)
         self.sigmoid = nn.Sigmoid()
+        #self.relu = nn.ReLU(inplace=True)
 
     def forward(self, x):
         # Apply max-pool and avg-pool along channel axis (dim=1)
         max_pool = torch.max(x, dim=1, keepdim=True)[0]
         avg_pool = torch.mean(x, dim=1, keepdim=True)
-        
+
         pool = torch.cat([max_pool, avg_pool], dim=1)  # shape (B, 2, H, W)
         attention = self.sigmoid(self.conv(pool))      # shape (B, 1, H, W)
         return x * attention

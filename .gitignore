@@ -46,6 +46,7 @@ dist/
 *.json
 checkpoints/
 outputs/
+config/
 *.zip
 *.csv
 *.yaml

@@ -29,15 +29,20 @@ def train_no_upsample(
     val_fid_interval=5,
     forced_indices=None,
     device=None,
-    verbose=True
+    verbose=True,
+    early_stopping_patience=10 
 ):
     device = device or ("cuda" if torch.cuda.is_available() else "cpu")
     model = model.to(device)
-    optimizer = optimizer
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.5, patience=5)
 
     os.makedirs(save_dir, exist_ok=True)
+    os.makedirs(checkpoint_dir, exist_ok=True)
+
     best_val_psnr = 0
+    best_epoch = -1
+    early_stop_counter = 0  # ✅ early stopping counter
+
     history = {'train_loss': [], 'val_psnr': [], 'val_ssim': [], 'val_fid': []}
 
     for epoch in range(num_epochs):
@@ -89,10 +94,19 @@ def train_no_upsample(
             print(f"Epoch {epoch+1}: Train Loss={avg_train_loss:.4f}, Val PSNR={val_psnr:.2f}, SSIM={val_ssim:.4f}")
 
         if checkpoint_dir and val_psnr > best_val_psnr:
-
             best_val_psnr = val_psnr
+            best_epoch = epoch
+            early_stop_counter = 0  # ✅ reset on improvement
             torch.save(model.state_dict(), os.path.join(checkpoint_dir, model_name + '_best_model.pth'))
+        else:
+            early_stop_counter += 1  # ✅ increment when no improvement
 
+        if early_stop_counter >= early_stopping_patience:
+            if verbose:
+                print(f"\nEarly stopping triggered at epoch {epoch+1}. No improvement in PSNR for {early_stopping_patience} consecutive epochs.")
+            break
+
+    # ==== Final test evaluation ====
     model.eval()
     psnr_list, ssim_list = [], []
     collage_dir = Path(save_dir) / "collages"
@@ -165,3 +179,4 @@ def train_no_upsample(
             json.dump(example_data, f, indent=2)
 
     return model, history, final_metrics
+
