@@ -57,6 +57,50 @@ def download_div2k(destination="data"):
         os.rmdir(extract_temp)
         print("Files flattened and duplicates removed.")
 
+import os
+from PIL import Image
+import torchvision.transforms.functional as TF
+
+def add_augmentation(directory):
+    """
+    For each image in the directory that is not already augmented,
+    creates 3 augmented versions (rotated 90°, horizontal flip, vertical flip)
+    and saves them with proper suffixes.
+    """
+    suffixes = ["_rot", "_hflip", "_vflip"]
+    valid_exts = (".png", ".jpg", ".jpeg")
+
+    for fname in os.listdir(directory):
+        if not fname.lower().endswith(valid_exts):
+            continue
+
+        # Skip already augmented files
+        if any(suffix in fname for suffix in suffixes):
+            continue
+
+        base, ext = os.path.splitext(fname)
+        path = os.path.join(directory, fname)
+
+        try:
+            img = Image.open(path).convert("RGB")
+
+            # Rotate 90 degrees
+            img_rot = TF.rotate(img, 90)
+            img_rot.save(os.path.join(directory, f"{base}_rot{ext}"))
+
+            # Horizontal flip
+            img_hflip = TF.hflip(img)
+            img_hflip.save(os.path.join(directory, f"{base}_hflip{ext}"))
+
+            # Vertical flip
+            img_vflip = TF.vflip(img)
+            img_vflip.save(os.path.join(directory, f"{base}_vflip{ext}"))
+
+        except Exception as e:
+            print(f"Skipping {fname}: {e}")
+
+    print("✔️ Augmentation complete.")
+
 def preprocess_div2k_center_crop(source_folder="Data/DIV2K", target_folder="Data/DIV2K_CROPPED", patch_size=(512, 512)):
     """
     Extracts a centered patch of size `patch_size` (default 512x512) from each image in 'source_folder'

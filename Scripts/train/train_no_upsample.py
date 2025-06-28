@@ -15,11 +15,10 @@ import numpy as np
 from Scripts.utils.metric_utils import compute_psnr, compute_ssim_batch
 from Scripts.utils.plot_utils import create_collage
 
-def train_no_upsample(
+def train_and_validate_no_upsample(
     model,
     train_loader,
     val_loader,
-    test_loader,
     optimizer,
     loss_fn,
     save_dir,
@@ -27,10 +26,9 @@ def train_no_upsample(
     model_name="RCAN",
     num_epochs=20,
     val_fid_interval=5,
-    forced_indices=None,
     device=None,
     verbose=True,
-    early_stopping_patience=10 
+    early_stopping_patience=10,
 ):
     device = device or ("cuda" if torch.cuda.is_available() else "cpu")
     model = model.to(device)
@@ -41,8 +39,7 @@ def train_no_upsample(
 
     best_val_psnr = 0
     best_epoch = -1
-    early_stop_counter = 0  # ✅ early stopping counter
-
+    early_stop_counter = 0
     history = {'train_loss': [], 'val_psnr': [], 'val_ssim': [], 'val_fid': []}
 
     for epoch in range(num_epochs):
@@ -96,17 +93,39 @@ def train_no_upsample(
         if checkpoint_dir and val_psnr > best_val_psnr:
             best_val_psnr = val_psnr
             best_epoch = epoch
-            early_stop_counter = 0  # ✅ reset on improvement
+            early_stop_counter = 0
             torch.save(model.state_dict(), os.path.join(checkpoint_dir, model_name + '_best_model.pth'))
         else:
-            early_stop_counter += 1  # ✅ increment when no improvement
+            early_stop_counter += 1
 
         if early_stop_counter >= early_stopping_patience:
             if verbose:
-                print(f"\nEarly stopping triggered at epoch {epoch+1}. No improvement in PSNR for {early_stopping_patience} consecutive epochs.")
+                print(f"\nEarly stopping triggered at epoch {epoch+1}. No improvement in PSNR for {early_stopping_patience} epochs.")
             break
 
-    # ==== Final test evaluation ====
+    return model, history
+
+
+def test_no_upsample(
+    model,
+    test_loader,
+    save_dir,
+    forced_indices=None,
+    model_name="RCAN",
+    checkpoint_dir="checkpoints",
+    device=None,
+    verbose=True
+):
+    device = device or ("cuda" if torch.cuda.is_available() else "cpu")
+    model = model.to(device)
+
+    if checkpoint_dir:
+        best_model_path = os.path.join(checkpoint_dir, model_name + '_best_model.pth')
+        if os.path.exists(best_model_path):
+            model.load_state_dict(torch.load(best_model_path))
+            if verbose:
+                print(f"Loaded best model from: {best_model_path}")
+
     model.eval()
     psnr_list, ssim_list = [], []
     collage_dir = Path(save_dir) / "collages"
@@ -172,11 +191,9 @@ def train_no_upsample(
         print("SSIM:", final_metrics['test_ssim'])
         print("FID :", final_metrics['test_fid'])
 
-    if save_dir:
-        with open(os.path.join(save_dir, 'metrics.json'), 'w') as f:
-            json.dump({**history, **final_metrics}, f, indent=2)
-        with open(os.path.join(save_dir, 'test_examples.json'), 'w') as f:
-            json.dump(example_data, f, indent=2)
+    with open(os.path.join(save_dir, 'metrics.json'), 'w') as f:
+        json.dump(final_metrics, f, indent=2)
+    with open(os.path.join(save_dir, 'test_examples.json'), 'w') as f:
+        json.dump(example_data, f, indent=2)
 
-    return model, history, final_metrics
-
+    return final_metrics, example_data

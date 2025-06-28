@@ -3,9 +3,28 @@ import os
 import time
 from datetime import datetime
 
-def log_result(model_name, loss_type, metrics, save_dir, csv_path="results.csv"):
-    """Append model results to a central CSV log with timestamps."""
-    fieldnames = ["timestamp_unix", "timestamp_readable", "model", "loss", "psnr", "ssim", "fid", "save_dir"]
+def log_result(
+    model_name,
+    loss_type,
+    metrics,
+    save_dir,
+    final_train_loss=None,
+    final_val_loss=None,
+    csv_path="results.csv"
+):
+    """Append model results to a central CSV log with timestamps and losses."""
+    fieldnames = [
+        "timestamp_unix",
+        "timestamp_readable",
+        "model",
+        "loss",
+        "train_loss",
+        "val_loss",
+        "psnr",
+        "ssim",
+        "fid",
+        "save_dir"
+    ]
     file_exists = os.path.exists(csv_path)
 
     timestamp_unix = int(time.time())
@@ -16,6 +35,8 @@ def log_result(model_name, loss_type, metrics, save_dir, csv_path="results.csv")
         "timestamp_readable": timestamp_readable,
         "model": model_name,
         "loss": loss_type,
+        "train_loss": final_train_loss,
+        "val_loss": final_val_loss,
         "psnr": metrics.get("test_psnr"),
         "ssim": metrics.get("test_ssim"),
         "fid": metrics.get("test_fid"),
