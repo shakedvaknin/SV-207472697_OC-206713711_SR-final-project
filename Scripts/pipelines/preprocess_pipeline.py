@@ -2,14 +2,19 @@
 from Data.data_loader import DIV2KDataset
 from Data.data_utils import download_div2k, add_augmentation
 from torch.utils.data import DataLoader, random_split
+from Data.data_loader import TiledDIV2KDataset
 
 def preprocess_pipeline(config):
-
 
     print("📥 Downloading and preparing DIV2K dataset...")
     download_div2k("Data")
     add_augmentation("Data/DIV2K")
-    dataset = DIV2KDataset("Data/DIV2K", scale=config["scale"])
+    if config["tiled"] == True:
+        print("Using TiledDIV2KDataset")
+        dataset = TiledDIV2KDataset("Data/DIV2K", scale=config["scale"])
+    else:
+        print("Using DIV2KDataset")
+        dataset = DIV2KDataset("Data/DIV2K", scale=config["scale"])
 
     total_size = len(dataset)
     train_size = int(0.8 * total_size)

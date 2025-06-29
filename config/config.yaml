@@ -1,7 +1,12 @@
-model: dsrcnn_ca         # Options: SRCNN, SvOcSRCNN, VDSR_SA, VDSR, RCAN, dsrcnn_ca
-epochs: 20
+model: SRCNN         # Options: SRCNN, SvOcSRCNN, VDSR_SA, VDSR, RCAN, dsrcnn_ca
+epochs: 10
 scale: 4            # Upscaling factor (e.g., 2, 4)
-loss: combined           # Options: mse, charbonnier, combined
-save_dir: outputs/dsrcnn_ca
+loss: mse           # Options: mse, charbonnier, combined
+save_dir: outputs/SRCNN
 use_wandb: false
 batch_size: 4
+idx: [7, 13, 21, 29, 35, 43, 49, 57, 63, 71, 79]
+lr: 1e-5
+train: True
+test: True
+tiled: True  # Use TiledDIV2KDataset for training

@@ -5,6 +5,10 @@ import requests
 from tqdm import tqdm
 import torchvision.utils as vutils
 from PIL import Image, ImageFile
+import torchvision.transforms.functional as TF
+from concurrent.futures import ThreadPoolExecutor
+from tqdm import tqdm
+
 ImageFile.LOAD_TRUNCATED_IMAGES = True
 
 def download_div2k(destination="data"):
@@ -57,34 +61,29 @@ def download_div2k(destination="data"):
         os.rmdir(extract_temp)
         print("Files flattened and duplicates removed.")
 
-import os
-from PIL import Image
-import torchvision.transforms.functional as TF
 
-def add_augmentation(directory):
+def add_augmentation(directory, num_threads=8):
     """
-    For each image in the directory that is not already augmented,
-    creates 3 augmented versions (rotated 90°, horizontal flip, vertical flip)
-    and saves them with proper suffixes.
+    Augments images in the specified directory using multithreading.
+    Skips files already augmented. Saves rotated, h-flipped, and v-flipped versions.
     """
     suffixes = ["_rot", "_hflip", "_vflip"]
     valid_exts = (".png", ".jpg", ".jpeg")
 
+    # Filter base images
+    files_to_process = []
     for fname in os.listdir(directory):
-        if not fname.lower().endswith(valid_exts):
-            continue
+        if fname.lower().endswith(valid_exts) and not any(suffix in fname for suffix in suffixes):
+            files_to_process.append(fname)
 
-        # Skip already augmented files
-        if any(suffix in fname for suffix in suffixes):
-            continue
-
+    def augment_file(fname):
         base, ext = os.path.splitext(fname)
         path = os.path.join(directory, fname)
 
         try:
             img = Image.open(path).convert("RGB")
 
-            # Rotate 90 degrees
+            # Rotate 90°
             img_rot = TF.rotate(img, 90)
             img_rot.save(os.path.join(directory, f"{base}_rot{ext}"))
 
@@ -98,6 +97,11 @@ def add_augmentation(directory):
 
         except Exception as e:
             print(f"Skipping {fname}: {e}")
+
+    # Run in parallel
+    print(f"🔄 Starting augmentation on {len(files_to_process)} images using {num_threads} threads...")
+    with ThreadPoolExecutor(max_workers=num_threads) as executor:
+        list(tqdm(executor.map(augment_file, files_to_process), total=len(files_to_process)))
 
     print("✔️ Augmentation complete.")
 
