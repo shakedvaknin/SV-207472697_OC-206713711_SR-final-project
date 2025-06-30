@@ -64,7 +64,7 @@ class NewCombinedLoss(nn.Module):
 class CombinedLoss(nn.Module):
     def __init__(self, alpha=0.8, resize=True, device='cpu'):
         super().__init__()
-        self.perceptual = PerceptualLoss(resize=resize, device=device)
+        self.perceptual = PerceptualLoss(device=device)
         self.alpha = alpha
         self.mse = nn.MSELoss()
 
