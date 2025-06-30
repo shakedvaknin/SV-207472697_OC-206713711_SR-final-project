@@ -17,6 +17,45 @@ def annotate_image(tensor_img, text):
     draw.text((5, 5), text, fill="white", font=font)
     return TF.to_tensor(img)
 
+def create_collages_by_index(image_folder, save_folder):
+    """
+    Iterates over images named {index}_lr.{ext}, {index}_sr.{ext}, {index}_hr.{ext}
+    and creates a collage for each index using the provided `create_collage` function.
+    
+    Args:
+        image_folder (str): Path to the folder containing input images.
+        save_folder (str): Path to save the collages.
+    """
+    os.makedirs(save_folder, exist_ok=True)
+
+    # Collect all valid image files
+    files = [f for f in os.listdir(image_folder) if f.lower().endswith(('.png', '.jpg', '.jpeg'))]
+
+    # Group by index
+    image_groups = {}
+    for file in files:
+        name, _ = os.path.splitext(file)
+        try:
+            index, suffix = name.split('_')
+            if index not in image_groups:
+                image_groups[index] = {}
+            image_groups[index][suffix] = os.path.join(image_folder, file)
+        except ValueError:
+            continue  # skip if name format is invalid
+
+    # Create collages
+    for index, group in image_groups.items():
+        if all(k in group for k in ['lr', 'sr', 'hr']):
+            try:
+                images = [Image.open(group[k]) for k in ['lr', 'sr', 'hr']]
+                save_path = os.path.join(save_folder, f"{index}_collage.png")
+                create_collage(images, save_path)
+                print(f"✅ Saved collage: {save_path}")
+            except Exception as e:
+                print(f"⚠️ Error for index {index}: {e}")
+        else:
+            print(f"⚠️ Missing one or more images for index {index}, skipping.")
+
 def create_collage(images, save_path):
     widths, heights = zip(*(i.size for i in images))
     total_width = sum(widths)
