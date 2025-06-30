@@ -1,12 +1,13 @@
-model: SRCNN         # Options: SRCNN, SvOcSRCNN, VDSR_SA, VDSR, RCAN, dsrcnn_ca
-epochs: 10
-scale: 4            # Upscaling factor (e.g., 2, 4)
-loss: mse           # Options: mse, charbonnier, combined
-save_dir: outputs/SRCNN
-use_wandb: false
-batch_size: 4
-idx: [7, 13, 21, 29, 35, 43, 49, 57, 63, 71, 79]
-lr: 1e-5
-train: True
-test: True
-tiled: True  # Use TiledDIV2KDataset for training
+model: VDSR_SA                                    # Options: SRCNN, SvOcSRCNN, VDSR_SA, VDSR, RCAN, dsrcnn_ca
+epochs: 10                                        # Number of epochs to train
+scale: 4                                          # Upscaling factor (e.g., 2, 4)
+loss: combined                                    # Options: mse, charbonnier, combined
+save_dir: outputs/VDSR                            # Directory to save the model and outputs
+use_wandb: false                                  # Set to true to use Weights & Biases for logging
+batch_size: 4                                     # Batch size for training
+idx: [7, 13, 21, 29, 35, 43, 49, 57, 63, 71, 79]  # Indices of the test set to save
+lr: 1e-5                                          # Learning rate for the optimizer
+train: True                                       # Set to False if you only want to test
+test: True                                        # Set to False if you only want to train
+tiled: True                                       # Use TiledDIV2KDataset for training
+aug: False                                        # Use data augmentation

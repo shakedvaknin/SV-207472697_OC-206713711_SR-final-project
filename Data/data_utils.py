@@ -99,11 +99,11 @@ def add_augmentation(directory, num_threads=8):
             print(f"Skipping {fname}: {e}")
 
     # Run in parallel
-    print(f"🔄 Starting augmentation on {len(files_to_process)} images using {num_threads} threads...")
+    print(f"Starting augmentation on {len(files_to_process)} images using {num_threads} threads...")
     with ThreadPoolExecutor(max_workers=num_threads) as executor:
         list(tqdm(executor.map(augment_file, files_to_process), total=len(files_to_process)))
 
-    print("✔️ Augmentation complete.")
+    print("Augmentation complete.")
 
 def preprocess_div2k_center_crop(source_folder="Data/DIV2K", target_folder="Data/DIV2K_CROPPED", patch_size=(512, 512)):
     """

@@ -5,10 +5,10 @@ from torch.utils.data import DataLoader, random_split
 from Data.data_loader import TiledDIV2KDataset
 
 def preprocess_pipeline(config):
-
-    print("📥 Downloading and preparing DIV2K dataset...")
+    print("Downloading and preparing DIV2K dataset...")
     download_div2k("Data")
-    add_augmentation("Data/DIV2K")
+    if config["aug"] == True:
+        add_augmentation("Data/DIV2K")
     if config["tiled"] == True:
         print("Using TiledDIV2KDataset")
         dataset = TiledDIV2KDataset("Data/DIV2K", scale=config["scale"])
@@ -27,8 +27,6 @@ def preprocess_pipeline(config):
     test_loader = DataLoader(test_set, batch_size=1, shuffle=False)
 
     forced_indices = config["idx"]
-
     
-
     print("✅ Dataset ready.")
     return train_loader, val_loader, test_loader, forced_indices
