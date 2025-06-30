@@ -50,3 +50,4 @@ config/
 *.zip
 *.csv
 *.yaml
+test.py

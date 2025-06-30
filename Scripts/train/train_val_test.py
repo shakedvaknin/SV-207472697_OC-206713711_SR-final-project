@@ -15,6 +15,7 @@ from torchmetrics.image.fid import FrechetInceptionDistance
 
 import wandb
 
+from Scripts.utils.image_utils import resize_lr_images
 from Scripts.utils.metric_utils import compute_psnr, compute_ssim_batch
 from Scripts.utils.plot_utils import create_collage
 
@@ -198,6 +199,7 @@ def test_upsample(
 
             collage = [TF.to_pil_image(t.squeeze(0).cpu()) for t in [lr_img, output, hr_img]]
             collage_path = collage_dir / f"{idx:05d}_PSNR{psnr:.2f}_SSIM{ssim:.4f}.png"
+            resize_lr_images(example_dir, target_size=(512, 512))
             create_collage(collage, collage_path)
 
             paths = {
