@@ -19,6 +19,5 @@ def resize_lr_images(folder_path, target_size=(512, 512)):
                 with Image.open(file_path) as img:
                     img_resized = img.resize(target_size, Image.BICUBIC)
                     img_resized.save(file_path)
-                    print(f"Resized: {filename}")
             except Exception as e:
                 print(f"Failed to process {filename}: {e}")

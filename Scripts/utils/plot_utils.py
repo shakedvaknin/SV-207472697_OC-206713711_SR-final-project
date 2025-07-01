@@ -162,6 +162,5 @@ def create_multi_model_collage(root_dir: str = "outputs", font_path: str = None,
 
         out_path = root /"summary_collages"/ f"{example_idx:03d}_comparison_collage.png"
         collage.save(out_path)
-        print(f"Saved collage for example {example_idx} to {out_path}")
 
     print("All collages created successfully.")
