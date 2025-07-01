@@ -50,11 +50,11 @@ def create_collages_by_index(image_folder, save_folder):
                 images = [Image.open(group[k]) for k in ['lr', 'sr', 'hr']]
                 save_path = os.path.join(save_folder, f"{index}_collage.png")
                 create_collage(images, save_path)
-                print(f"✅ Saved collage: {save_path}")
+                print(f"Saved collage: {save_path}")
             except Exception as e:
-                print(f"⚠️ Error for index {index}: {e}")
+                print(f"Error for index {index}: {e}")
         else:
-            print(f"⚠️ Missing one or more images for index {index}, skipping.")
+            print(f"Missing one or more images for index {index}, skipping.")
 
 def create_collage(images, save_path):
     widths, heights = zip(*(i.size for i in images))
