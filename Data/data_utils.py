@@ -11,55 +11,65 @@ from tqdm import tqdm
 
 ImageFile.LOAD_TRUNCATED_IMAGES = True
 
+
 def download_div2k(destination="data"):
     """
-    Downloads the DIV2K dataset zip file, extracts it to 'data/DIV2K',
-    flattens all subfolders (copies images to a single folder), and removes duplicates.
+    Downloads and extracts DIV2K training, validation, and test HR sets into a single folder.
+    Flattens the structure and skips existing files.
     """
     os.makedirs(destination, exist_ok=True)
-    url = "http://data.vision.ee.ethz.ch/cvl/DIV2K/DIV2K_train_HR.zip"
-    zip_path = os.path.join(destination, "DIV2K_train_HR.zip")
-    extract_temp = os.path.join(destination, "_temp_extract")
+
+    # URLs for different splits
+    urls = {
+        "train": "http://data.vision.ee.ethz.ch/cvl/DIV2K/DIV2K_train_HR.zip",
+        "valid": "http://data.vision.ee.ethz.ch/cvl/DIV2K/DIV2K_valid_HR.zip",
+        #"test":  "http://data.vision.ee.ethz.ch/cvl/DIV2K/DIV2K_test_HR.zip"
+    }
+
     final_folder = os.path.join(destination, "DIV2K")
+    os.makedirs(final_folder, exist_ok=True)
+    temp_extract = os.path.join(destination, "_temp_extract")
+    os.makedirs(temp_extract, exist_ok=True)
 
-    # === Download ZIP ===
-    if not os.path.exists(zip_path):
-        print("Downloading DIV2K...")
-        with requests.get(url, stream=True) as r:
-            r.raise_for_status()
-            with open(zip_path, 'wb') as f:
-                for chunk in tqdm(r.iter_content(chunk_size=8192), desc="Downloading"):
-                    f.write(chunk)
-    else:
-        print("DIV2K zip already exists.")
+    for split, url in urls.items():
+        zip_filename = f"DIV2K_{split}_HR.zip"
+        zip_path = os.path.join(destination, zip_filename)
 
-    # === Extract ZIP to temp directory ===
-    if not os.path.exists(final_folder):
-        print("Extracting DIV2K...")
-        os.makedirs(extract_temp, exist_ok=True)
+        # === Download ZIP if not already downloaded ===
+        if not os.path.exists(zip_path):
+            print(f"Downloading {zip_filename}...")
+            with requests.get(url, stream=True) as r:
+                r.raise_for_status()
+                with open(zip_path, 'wb') as f:
+                    for chunk in tqdm(r.iter_content(chunk_size=8192), desc=f"Downloading {split}"):
+                        f.write(chunk)
+        else:
+            print(f"{zip_filename} already exists.")
+
+        # === Extract to temp folder ===
+        print(f"Extracting {zip_filename}...")
         with zipfile.ZipFile(zip_path, 'r') as zip_ref:
-            zip_ref.extractall(extract_temp)
-        print("Extraction complete.")
+            zip_ref.extractall(temp_extract)
 
-        # Flatten and copy all images to DIV2K directory, remove duplicates
-        os.makedirs(final_folder, exist_ok=True)
-        seen = set()
-        for root, _, files in os.walk(extract_temp):
+        # Move image files into final folder (skip duplicates)
+        for root, _, files in os.walk(temp_extract):
             for file in files:
                 if file.lower().endswith(('.png', '.jpg', '.jpeg')):
                     src_path = os.path.join(root, file)
                     dst_path = os.path.join(final_folder, file)
-                    if file not in seen:
-                        os.rename(src_path, dst_path)
-                        seen.add(file)
-        # Clean up temporary extraction
-        for root, dirs, files in os.walk(extract_temp, topdown=False):
+
+                    if not os.path.exists(dst_path):
+                        os.rename(src_path, dst_path)  # move only if not exists
+
+        # Clean temp folder
+        for root, dirs, files in os.walk(temp_extract, topdown=False):
             for name in files:
                 os.remove(os.path.join(root, name))
             for name in dirs:
                 os.rmdir(os.path.join(root, name))
-        os.rmdir(extract_temp)
-        print("Files flattened and duplicates removed.")
+
+    os.rmdir(temp_extract)
+    print("All splits extracted and flattened into DIV2K folder (duplicates skipped).")
 
 
 def add_augmentation(directory, num_threads=8):

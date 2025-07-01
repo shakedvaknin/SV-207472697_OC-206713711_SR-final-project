@@ -41,7 +41,7 @@ def train_and_validate_no_upsample(
     best_val_psnr = 0
     best_epoch = -1
     early_stop_counter = 0
-    history = {'train_loss': [], 'val_psnr': [], 'val_ssim': [], 'val_fid': []}
+    history = {'train_loss': [], 'val_loss': [], 'val_psnr': [], 'val_ssim': [], 'val_fid': []}
 
     for epoch in range(num_epochs):
         model.train()
@@ -61,16 +61,21 @@ def train_and_validate_no_upsample(
         history['train_loss'].append(avg_train_loss)
 
         model.eval()
+        val_loss_total = 0.0
         psnr_list, ssim_list = [], []
         with torch.no_grad():
             for lr_img, hr_img in val_loader:
                 lr_img, hr_img = lr_img.to(device), hr_img.to(device)
                 output = model(lr_img).clamp(0, 1)
+                val_loss_total += loss_fn(output, hr_img).item()
                 psnr_list.append(compute_psnr(output, hr_img))
                 ssim_list.append(compute_ssim_batch(output, hr_img))
 
+        avg_val_loss = val_loss_total / len(val_loader)
         val_psnr = np.mean(psnr_list)
         val_ssim = np.mean(ssim_list)
+
+        history['val_loss'].append(avg_val_loss)
         history['val_psnr'].append(val_psnr)
         history['val_ssim'].append(val_ssim)
 
@@ -89,7 +94,7 @@ def train_and_validate_no_upsample(
             history['val_fid'].append(None)
 
         if verbose:
-            print(f"Epoch {epoch+1}: Train Loss={avg_train_loss:.4f}, Val PSNR={val_psnr:.2f}, SSIM={val_ssim:.4f}")
+            print(f"Epoch {epoch+1}: Train Loss={avg_train_loss:.4f}, Val Loss={avg_val_loss:.4f}, PSNR={val_psnr:.2f}, SSIM={val_ssim:.4f}")
 
         if checkpoint_dir and val_psnr > best_val_psnr:
             best_val_psnr = val_psnr
@@ -103,6 +108,11 @@ def train_and_validate_no_upsample(
             if verbose:
                 print(f"\nEarly stopping triggered at epoch {epoch+1}. No improvement in PSNR for {early_stopping_patience} epochs.")
             break
+
+    # === Save full training history ===
+    metrics_path = os.path.join(save_dir, "metrics.json")
+    with open(metrics_path, "w") as f:
+        json.dump(history, f, indent=2)
 
     return model, history
 
