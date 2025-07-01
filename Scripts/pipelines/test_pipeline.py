@@ -1,4 +1,4 @@
-from Scripts.train.train_val_test import test_upsample as test_model_with_upsample
+from Scripts.train.train_val_test_upsample import test_upsample as test_model_with_upsample
 from Scripts.train.train_no_upsample import test_no_upsample as test_model_no_upsample
 from Scripts.utils.result_logger import log_result
 from Scripts.utils.plot_utils import generate_summary_collage_from_checkpoints
@@ -63,7 +63,7 @@ def test_pipeline(config, test_loader, forced_indices, device, history=None):
     log_result(model_name, config["loss"], metrics, config["save_dir"])
     generate_summary_collage_from_checkpoints()
 
-    print(f"✅ Testing complete for model: {model_name}")
+    print(f"Testing complete for model: {model_name}")
 
     final_train_loss = history['train_loss'][-1] if history and 'train_loss' in history else None
     final_val_loss = history['val_loss'][-1] if history and 'val_loss' in history else None

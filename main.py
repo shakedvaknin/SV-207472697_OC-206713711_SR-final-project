@@ -41,7 +41,7 @@ def main():
             history=history
         )
 
-    print("✅ All stages complete.")
+    print("All stages complete.")
 
 if __name__ == "__main__":
     main()

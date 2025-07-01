@@ -1,7 +1,7 @@
 from torch import nn
 from torch.optim import Adam
 
-from Scripts.train.train_val_test import train_and_validate
+from Scripts.train.train_val_test_upsample import train_and_validate
 from Scripts.train.train_no_upsample import train_and_validate_no_upsample as train_no_upsample
 
 from Scripts.utils.losses import CombinedLoss, CharbonnierLoss, NewCombinedLoss
@@ -53,7 +53,7 @@ def train_pipeline(config, train_loader, val_loader, device):
     
     optimizer = Adam(model.parameters(), lr=lr)
 
-    print(f"🚀 Training model: {model_name} with loss: {config['loss']}")
+    print(f"Training model: {model_name} with loss: {config['loss']}")
 
     if model_name in ["RCAN", "RCAN_SWIN"]:
         trained_model, history, _ = train_no_upsample(
@@ -88,5 +88,5 @@ def train_pipeline(config, train_loader, val_loader, device):
             early_stopping_patience=10
         )
 
-    print(f"✅ Training completed for model: {model_name}")
+    print(f"Training completed for model: {model_name}")
     return trained_model, history
