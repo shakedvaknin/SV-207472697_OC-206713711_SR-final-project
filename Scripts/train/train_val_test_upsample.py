@@ -136,18 +136,19 @@ def train_and_validate(
 
     # === Append training history to metrics.json ===
     metrics_path = os.path.join(save_dir, "metrics.json")
-    if os.path.exists(metrics_path):
-        with open(metrics_path, "r") as f:
-            existing_data = json.load(f)
-        if isinstance(existing_data, list):
-            existing_data.append(history)
-        else:
-            existing_data = [existing_data, history]
-    else:
-        existing_data = [history]
+    # if os.path.exists(metrics_path):
+    #     with open(metrics_path, "r") as f:
+    #         existing_data = json.load(f)
+    #     if isinstance(existing_data, dict):
+    #         existing_data.append(history)
+    #     else:
+    #         existing_data = [existing_data, history]
+    # else:
+    #     existing_data = [history]
 
     with open(metrics_path, "w") as f:
-        json.dump(existing_data, f, indent=2)
+        #json.dump(existing_data, f, indent=2)
+        json.dump(history, f, indent=2)
 
     return model, history
 
@@ -241,8 +242,47 @@ def test_upsample(
         for k, v in final_metrics.items():
             print(f"{k.upper()}: {v:.4f}")
 
-    with open(Path(save_dir) / "metrics.json", 'w') as f:
-        json.dump(final_metrics, f, indent=2)
+    # metrics_path = os.path.join(save_dir, 'metrics.json')
+    # if os.path.exists(metrics_path):
+    #     with open(metrics_path, 'r') as f:
+    #         metrics_data = json.load(f)
+    #     if isinstance(metrics_data, dict):
+    #         metrics_data.update(final_metrics)
+    #     else:
+    #         metrics_data = {"train_val": metrics_data, "test": final_metrics}
+    # else:
+    #     metrics_data = {"test": final_metrics}
+
+    # with open(metrics_path, 'w') as f:
+    #     json.dump(metrics_data, f, indent=2)
+        
+    # with open(Path(save_dir) / "test_examples.json", 'w') as f:
+    #     json.dump(example_data, f, indent=2)
+
+    metrics_path = os.path.join(save_dir, 'metrics.json')
+
+    # Load existing history from metrics.json if it exists
+    if os.path.exists(metrics_path):
+        try:
+            with open(metrics_path, 'r') as f:
+                metrics_data = json.load(f)
+            if not isinstance(metrics_data, dict):
+                print("Warning: metrics.json is not a valid dictionary. Resetting.")
+                metrics_data = {}
+        except Exception as e:
+            print(f"Error reading metrics.json: {e}. Resetting.")
+            metrics_data = {}
+    else:
+        metrics_data = {}
+
+    # Update the loaded dictionary with test results
+    metrics_data.update(final_metrics)
+
+    # Save updated dictionary (overwriting the file)
+    with open(metrics_path, 'w') as f:
+        json.dump(metrics_data, f, indent=2)
+
+    # Save test examples
     with open(Path(save_dir) / "test_examples.json", 'w') as f:
         json.dump(example_data, f, indent=2)
 
