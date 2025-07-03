@@ -39,7 +39,7 @@ class PerceptualLoss(nn.Module):
         return self.criterion(sr_feat, hr_feat)
 
 class NewCombinedLoss(nn.Module):
-    def __init__(self, alpha=0.1, beta=0.6, data_range=1.0):
+    def __init__(self, alpha=0.2, beta=0.4, data_range=1.0):
         """
         alpha: weight for MSE
         beta: weight for L1
